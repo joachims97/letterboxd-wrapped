@@ -89,9 +89,11 @@ app.get('/api/report/:username', async (req, res) => {
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`Letterboxd Wrapped server running on http://localhost:${port}`);
-});
+if (require.main === module) {
+  app.listen(port, () => {
+    console.log(`Letterboxd Wrapped server running on http://localhost:${port}`);
+  });
+}
 
 function clampNumber(value, min, max, fallback) {
   if (!value) return fallback;
