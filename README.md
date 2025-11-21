@@ -34,6 +34,10 @@ Generate a personalized “Wrapped” style report for any public Letterboxd pro
 
 4. Visit `http://localhost:3000`, enter a Letterboxd username, and generate their report.
 
+### Deploying to Vercel
+
+The repo includes a `vercel.json` that maps `/api/*` requests to the Express server and serves the `/public` folder statically. After setting the `TMDB_API_KEY` environment variable in Vercel, simply import the repo and deploy—no custom build commands required.
+
 ### Notes
 
 - The scraper respects pagination limits; adjust `maxFilms` / `maxWatchlist` via query params if needed.
