@@ -221,7 +221,10 @@ function setStatus(message, variant = 'info') {
   statusMessage.classList.remove('hidden');
 }
 
-function shareReport() {
+function shareReport(event) {
+  if (event) {
+    event.preventDefault();
+  }
   if (!lastUsername) {
     setStatus('Generate a report first!', 'error');
     return;
