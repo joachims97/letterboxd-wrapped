@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Letterboxd Wrapped</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+    <script src="app.js" type="module" defer></script>
+  </head>
+  <body>
+    <div class="gradient-bg"></div>
+    <main class="app-shell">
+      <header class="hero">
+        <h1>Letterboxd Wrapped</h1>
+        <p>
+          Generate a report for your Letterboxd profile. Explore your eras, genres,
+          hottest takes, and get a personalized watchlist recommendation.
+        </p>
+        <form id="lookup-form">
+          <input
+            id="username"
+            type="text"
+            name="username"
+            placeholder="Enter Letterboxd username"
+            required
+          />
+          <button type="submit">Show my report</button>
+        </form>
+        <div class="cta-actions">
+          <button id="share-report" type="button">Share report</button>
+        </div>
+        <p id="status-message" class="status hidden"></p>
+      </header>
+
+      <section id="report" class="report hidden">
+        <div class="summary-grid">
+          <article>
+            <span>Films logged</span>
+            <strong id="films-watched">0</strong>
+          </article>
+          <article>
+            <span>Average rating</span>
+            <strong id="average-rating">-</strong>
+          </article>
+          <article>
+            <span>Watchlist size</span>
+            <strong id="watchlist-size">0</strong>
+          </article>
+        </div>
+
+        <div class="chart-grid">
+          <div class="card">
+            <div class="card-header">
+              <h2>Decade overview</h2>
+            </div>
+            <canvas id="decade-chart" height="260"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2>Genre breakdown</h2>
+            </div>
+            <canvas id="genre-chart" height="260"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <h2>Countries explored</h2>
+            </div>
+            <canvas id="country-chart" height="260"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Controversial takes</h2>
+            <p>Where you loved or loathed against consensus</p>
+          </div>
+          <div class="controversial">
+            <div>
+              <h3>Underrated favorites</h3>
+              <ul id="underrated-list"></ul>
+            </div>
+            <div>
+              <h3>Harshest ratings</h3>
+              <ul id="overrated-list"></ul>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Director ratings</h2>
+            <p>Most watched filmmakers and your average ratings</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Director</th>
+                <th>Films logged</th>
+                <th>Avg rating</th>
+              </tr>
+            </thead>
+            <tbody id="director-table"></tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h2>Watchlist recommendations</h2>
+            <p>Films from your watchlist that best match your taste profile</p>
+          </div>
+          <div id="recommendations" class="recommendations"></div>
+        </div>
+
+        <div class="share-footer">
+          <button id="share-report-bottom" type="button">Share report</button>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,363 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f151c;
+  --surface: #1c242f;
+  --surface-secondary: #141b23;
+  --text: #f6f6f3;
+  --muted: #9fb0c7;
+  --accent: #ff7f11;
+  --accent-soft: rgba(255, 127, 17, 0.25);
+  --border: rgba(255, 255, 255, 0.08);
+  font-family: 'Space Grotesk', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.gradient-bg {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 127, 17, 0.2), transparent 45%),
+    radial-gradient(circle at 80% 10%, rgba(13, 133, 255, 0.25), transparent 55%);
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.app-shell {
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+  z-index: 1;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.hero h1 {
+  font-size: clamp(2.5rem, 5vw, 3.25rem);
+  margin-bottom: 0.5rem;
+}
+
+.hero p {
+  color: var(--muted);
+  max-width: 640px;
+  margin: 0.5rem auto 1.5rem;
+  line-height: 1.6;
+}
+
+form {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+input {
+  flex: 1;
+  min-width: 240px;
+  max-width: 360px;
+  padding: 0.9rem 1rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-secondary);
+  color: inherit;
+  font-size: 1rem;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.9rem 1.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  background: var(--accent);
+  color: #0f0f0f;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 25px rgba(255, 127, 17, 0.35);
+}
+
+.cta-actions {
+  margin-top: 1rem;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.cta-actions button {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.share-footer {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.share-footer button {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.status {
+  margin-top: 1rem;
+  font-weight: 500;
+}
+
+.status.error {
+  color: #f87171;
+}
+
+.status.success {
+  color: #4ade80;
+}
+
+.status.hidden {
+  display: none;
+}
+
+.report.hidden {
+  display: none;
+}
+
+.report {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+}
+
+.summary-grid article {
+  background: var(--surface);
+  border-radius: 18px;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+}
+
+.summary-grid span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.summary-grid strong {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 1.9rem;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.card {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  backdrop-filter: blur(8px);
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.card-header p {
+  color: var(--muted);
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+  font-size: 0.95rem;
+}
+
+.controversial {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.controversial ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.controversial li {
+  background: var(--surface-secondary);
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.controversial-poster {
+  width: 60px;
+  height: 90px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+.controversial-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.controversial-title {
+  font-weight: 600;
+}
+
+.controversial-meta {
+  display: flex;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.diff-positive {
+  color: #4ade80;
+}
+
+.diff-negative {
+  color: #f87171;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.65rem 0.5rem;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+tbody tr {
+  border-bottom: 1px solid var(--border);
+}
+
+.recommendations {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.recommendation-card {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-secondary);
+  padding: 0.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.recommendation-link {
+  display: block;
+  border-radius: 14px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recommendation-link img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.recommendation-link .poster-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 21, 28, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f6f6f3;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.recommendation-link:hover img {
+  opacity: 0.5;
+}
+
+.recommendation-link:hover .poster-overlay {
+  opacity: 1;
+}
+
+.recommendation-link.disabled {
+  pointer-events: none;
+}
+
+.match-pill {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  background: #22c55e;
+  color: #041216;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
+
+  button,
+  input {
+    width: 100%;
+  }
+
+  .cta-actions button {
+    width: auto;
+  }
+}
