@@ -303,4 +303,6 @@ td {
   .takes-row { grid-template-columns: 1fr; }
   form { flex-wrap: wrap; }
   input { width: 100%; }
+  .takes-col li { max-width: 100%; }
+  .take-diff { min-width: auto; }
 }
