@@ -24,14 +24,8 @@ app.get('/api/report/:username', async (req, res) => {
     return res.status(400).json({ message: 'Username is required' });
   }
 
-  const maxFilms = clampNumber(req.query.maxFilms, 50, 1000, 400);
-  const maxWatchlist = clampNumber(req.query.maxWatchlist, 25, 500, 200);
-
   try {
-    const { films, watchlist, favorites } = await scrapeUserProfile(username, {
-      maxFilms,
-      maxWatchlist,
-    });
+    const { films, watchlist, favorites } = await scrapeUserProfile(username);
 
     if (!films.length) {
       return res
@@ -69,6 +63,16 @@ app.get('/api/report/:username', async (req, res) => {
       report.recommendations = [];
     }
 
+    // Include slim film list for chart drill-down
+    report._allFilms = derivedFilms.map((f) => ({
+      title: f.title,
+      releaseYear: f.releaseYear,
+      rating: f.rating,
+      genres: f.genres,
+      countries: f.countries,
+      posterUrl: f.posterUrl,
+    }));
+
     return res.json(report);
   } catch (error) {
     console.error('Report generation failed', error.message);
@@ -93,13 +97,6 @@ if (require.main === module) {
   app.listen(port, () => {
     console.log(`Letterboxd Wrapped server running on http://localhost:${port}`);
   });
-}
-
-function clampNumber(value, min, max, fallback) {
-  if (!value) return fallback;
-  const parsed = parseInt(value, 10);
-  if (Number.isNaN(parsed)) return fallback;
-  return Math.min(Math.max(parsed, min), max);
 }
 
 module.exports = app;

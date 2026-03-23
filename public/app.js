@@ -7,21 +7,23 @@ const shareButtonBottom = document.getElementById('share-report-bottom');
 
 const chartRefs = {};
 let lastUsername = '';
+let lastReport = null;
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const username = usernameInput.value.trim();
   if (!username) return;
 
-  setStatus(`Generating report for @${username}...`);
+  setStatus('Loading...');
   toggleReport(false);
 
   try {
     const report = await fetchReport(username);
     lastUsername = username;
+    lastReport = report;
     updateUrl(username);
     renderReport(report);
-    setStatus(`Report ready for @${username}!`, 'success');
+    setStatus('');
   } catch (error) {
     console.error(error);
     setStatus(error.message || 'Something went wrong', 'error');
@@ -45,53 +47,144 @@ async function fetchReport(username) {
 function renderReport(data) {
   document.getElementById('films-watched').textContent = data.totals.filmsWatched;
   document.getElementById('average-rating').textContent = data.totals.averageRating ?? '—';
-  document.getElementById('watchlist-size').textContent = data.totals.watchlistSize;
 
-  renderDecadeChart(data.decadeHistogram);
-  renderGenreChart(data.genreBreakdown);
-  renderCountryChart(data.countryDiversity);
+  renderDecadeChart(data);
+  renderGenreChart(data);
+  renderCountryChart(data);
 
-  renderControversialList('underrated-list', data.controversialTakes.underrated, '▲');
-  renderControversialList('overrated-list', data.controversialTakes.overrated, '▼');
+  renderTakesList('underrated-list', data.controversialTakes.underrated);
+  renderTakesList('overrated-list', data.controversialTakes.overrated);
   renderDirectorTable(data.directors);
-  renderRecommendations(data.recommendations);
+
+  // Clear any open detail panels
+  document.querySelectorAll('.chart-detail').forEach((el) => el.classList.add('hidden'));
 
   toggleReport(true);
 }
 
-function renderDecadeChart(decadeData) {
-  const labels = [...decadeData.labels].reverse();
-  const data = [...decadeData.data].reverse();
-  renderHorizontalBarChart('decade-chart', labels, data, {
-    backgroundColor: 'rgba(255, 127, 17, 0.6)',
-    borderColor: 'rgba(255, 127, 17, 1)',
+// -- Charts with click-to-expand --
+
+function getFilmsForDecade(data, decade) {
+  return data._allFilms.filter((f) => {
+    if (!f.releaseYear) return false;
+    const d = Math.floor(f.releaseYear / 10) * 10 + 's';
+    return d === decade;
   });
 }
 
-function renderGenreChart(genres) {
-  const labels = genres.slice(0, 8).map((item) => item.genre);
-  const data = genres.slice(0, 8).map((item) => item.count);
-  renderHorizontalBarChart('genre-chart', labels, data, {
-    backgroundColor: 'rgba(249, 115, 22, 0.8)',
-    borderColor: '#fb923c',
+function getFilmsForGenre(data, genre) {
+  return data._allFilms.filter((f) => f.genres && f.genres.includes(genre));
+}
+
+function getFilmsForCountry(data, country) {
+  return data._allFilms.filter((f) => f.countries && f.countries.includes(country));
+}
+
+function renderDecadeChart(data) {
+  const labels = [...data.decadeHistogram.labels].reverse();
+  const values = [...data.decadeHistogram.data].reverse();
+  renderBarChart('decade-chart', labels, values, '#2d2d2d', (label) => {
+    showDetail('decade-detail', label, getFilmsForDecade(data, label));
   });
 }
 
-function renderCountryChart(countryData) {
-  const labels = countryData.topCountries.map((entry) => entry.country);
-  const data = countryData.topCountries.map((entry) => entry.count);
-  renderHorizontalBarChart('country-chart', labels, data, {
-    backgroundColor: '#34d399',
-    borderColor: '#10b981',
+function renderGenreChart(data) {
+  const labels = data.genreBreakdown.slice(0, 8).map((g) => g.genre);
+  const values = data.genreBreakdown.slice(0, 8).map((g) => g.count);
+  renderBarChart('genre-chart', labels, values, '#2d2d2d', (label) => {
+    showDetail('genre-detail', label, getFilmsForGenre(data, label));
   });
 }
 
-function renderControversialList(targetId, items, symbol) {
+function renderCountryChart(data) {
+  const labels = data.countryDiversity.topCountries.map((c) => c.country);
+  const values = data.countryDiversity.topCountries.map((c) => c.count);
+  renderBarChart('country-chart', labels, values, '#2d2d2d', (label) => {
+    showDetail('country-detail', label, getFilmsForCountry(data, label));
+  });
+}
+
+function renderBarChart(id, labels, data, color, onClick) {
+  destroyChart(id);
+  const ctx = document.getElementById(id).getContext('2d');
+  chartRefs[id] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: labels.length ? labels : ['—'],
+      datasets: [{
+        data: labels.length ? data : [0],
+        backgroundColor: color,
+        borderWidth: 0,
+        borderRadius: 0,
+      }],
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: {
+          ticks: { color: '#888', font: { size: 10 } },
+          grid: { color: '#eee' },
+          beginAtZero: true,
+        },
+        y: {
+          ticks: { color: '#1a1a1a', font: { size: 11 } },
+          grid: { display: false },
+        },
+      },
+      onClick: (_event, elements) => {
+        if (!elements.length) return;
+        const idx = elements[0].index;
+        const label = labels[idx];
+        if (label && onClick) onClick(label);
+      },
+    },
+  });
+}
+
+function showDetail(containerId, label, films) {
+  const container = document.getElementById(containerId);
+
+  // Toggle off if same label clicked again
+  if (!container.classList.contains('hidden') && container.dataset.label === label) {
+    container.classList.add('hidden');
+    return;
+  }
+
+  container.dataset.label = label;
+
+  const sorted = [...films].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+  let html = `<div class="chart-detail-header">
+    <span>${label} (${films.length})</span>
+    <button class="chart-detail-close" onclick="this.closest('.chart-detail').classList.add('hidden')">&times;</button>
+  </div><ul class="chart-detail-list">`;
+
+  sorted.forEach((f) => {
+    const poster = f.posterUrl || placeholderPoster();
+    const rating = typeof f.rating === 'number' ? '★'.repeat(Math.floor(f.rating)) + (f.rating % 1 ? '½' : '') : '';
+    html += `<li>
+      <img src="${poster}" alt="" />
+      <span class="film-title">${f.title}</span>
+      <span class="film-year">${f.releaseYear || ''}</span>
+      <span class="film-rating">${rating}</span>
+    </li>`;
+  });
+
+  html += '</ul>';
+  container.innerHTML = html;
+  container.classList.remove('hidden');
+}
+
+// -- Controversial takes with posters --
+
+function renderTakesList(targetId, items) {
   const list = document.getElementById(targetId);
   list.innerHTML = '';
 
   if (!items.length) {
-    list.innerHTML = '<li>No data yet</li>';
+    list.innerHTML = '<li>No data</li>';
     return;
   }
 
@@ -103,14 +196,12 @@ function renderControversialList(targetId, items, symbol) {
     const diffLabel = film.diff >= 0 ? `+${diff}` : diff;
     const poster = film.posterUrl || placeholderPoster();
     li.innerHTML = `
-      <img src="${poster}" alt="${film.title} poster" class="controversial-poster"/>
-      <div class="controversial-body">
-        <div class="controversial-title">${film.title}</div>
-        <div class="controversial-meta">
-          <span>${film.rating?.toFixed(1) ?? '—'} ★ vs avg ${tmdbRating} ★</span>
-          <span class="${diffClass}">(${diffLabel})</span>
-        </div>
+      <img src="${poster}" alt="" class="take-poster" />
+      <div class="take-info">
+        <div class="take-title">${film.title}</div>
+        <div class="take-ratings">${film.rating?.toFixed(1) ?? '—'} ★ you &middot; ${tmdbRating} ★ avg</div>
       </div>
+      <div class="take-diff ${diffClass}">${diffLabel}</div>
     `;
     list.appendChild(li);
   });
@@ -121,7 +212,7 @@ function renderDirectorTable(directors) {
   tbody.innerHTML = '';
 
   if (!directors.length) {
-    tbody.innerHTML = `<tr><td colspan="3">No director stats yet</td></tr>`;
+    tbody.innerHTML = '<tr><td colspan="3">No data</td></tr>';
     return;
   }
 
@@ -131,74 +222,6 @@ function renderDirectorTable(directors) {
       <td>${director.count}</td>
       <td>${director.averageRating ?? '—'}</td>`;
     tbody.appendChild(tr);
-  });
-}
-
-function renderRecommendations(recommendations) {
-  const container = document.getElementById('recommendations');
-  container.innerHTML = '';
-
-  if (!recommendations.length) {
-    container.innerHTML =
-      '<p>No watchlist recommendations yet. Make sure your watchlist is public.</p>';
-    return;
-  }
-
-  recommendations.forEach((film) => {
-    const poster = film.posterUrl || placeholderPoster();
-    const match = Math.round((film.score || 0) * 100);
-    const link = film.letterboxdUrl || '#';
-    const disabled = link === '#';
-    container.innerHTML += `<article class="recommendation-card">
-        <a class="recommendation-link${disabled ? ' disabled' : ''}" href="${link}" ${
-          disabled ? '' : 'target="_blank" rel="noopener noreferrer"'
-        }>
-          <img src="${poster}" alt="${film.title} poster" />
-          <div class="poster-overlay">
-            <span>Open in Letterboxd</span>
-          </div>
-        </a>
-        <span class="match-pill">Match ${match}%</span>
-      </article>`;
-  });
-}
-
-function renderHorizontalBarChart(id, labels, data, colors = {}) {
-  destroyChart(id);
-  const ctx = document.getElementById(id).getContext('2d');
-  const safeLabels = labels.length ? labels : ['No data'];
-  const safeData = labels.length ? data : [0];
-  chartRefs[id] = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: safeLabels,
-      datasets: [
-        {
-          data: safeData,
-          borderRadius: 10,
-          backgroundColor: colors.backgroundColor || 'rgba(59, 130, 246, 0.6)',
-          borderColor: colors.borderColor || 'rgba(59, 130, 246, 1)',
-        },
-      ],
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      plugins: {
-        legend: { display: false },
-      },
-      scales: {
-        x: {
-          ticks: { color: '#9fb0c7' },
-          grid: { color: 'rgba(255, 255, 255, 0.08)' },
-          beginAtZero: true,
-        },
-        y: {
-          ticks: { color: '#f6f6f3' },
-          grid: { display: false },
-        },
-      },
-    },
   });
 }
 
@@ -214,38 +237,30 @@ function toggleReport(visible) {
 }
 
 function setStatus(message, variant = 'info') {
+  if (!message) {
+    statusMessage.classList.add('hidden');
+    return;
+  }
   statusMessage.textContent = message;
   statusMessage.classList.remove('hidden', 'error', 'success');
   if (variant === 'error') statusMessage.classList.add('error');
   if (variant === 'success') statusMessage.classList.add('success');
-  statusMessage.classList.remove('hidden');
 }
 
 function shareReport(event) {
-  if (event) {
-    event.preventDefault();
-  }
-  if (!lastUsername) {
-    setStatus('Generate a report first!', 'error');
-    return;
-  }
+  if (event) event.preventDefault();
+  if (!lastUsername) return;
 
   const url = new URL(window.location.href);
   url.searchParams.set('user', lastUsername);
 
   if (navigator.share) {
-    navigator
-      .share({
-        title: 'Letterboxd Wrapped',
-        text: `Check out @${lastUsername}'s Letterboxd Wrapped`,
-        url: url.toString(),
-      })
-      .catch(() => {});
+    navigator.share({ title: 'Letterboxd Wrapped', url: url.toString() }).catch(() => {});
   } else {
     navigator.clipboard
       .writeText(url.toString())
-      .then(() => setStatus('Share link copied to clipboard!', 'success'))
-      .catch(() => setStatus('Unable to copy share link', 'error'));
+      .then(() => setStatus('Link copied', 'success'))
+      .catch(() => setStatus('Copy failed', 'error'));
   }
 }
 

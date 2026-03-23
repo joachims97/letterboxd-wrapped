@@ -1,21 +1,34 @@
-const axios = require('axios');
 const cheerio = require('cheerio');
+const { chromium } = require('playwright-extra');
+const stealth = require('puppeteer-extra-plugin-stealth');
+
+chromium.use(stealth());
 
 const BASE_URL = 'https://letterboxd.com';
-const USER_AGENT =
-  'Letterboxd Wrapped Bot/1.0 (+https://github.com/user/letterboxd-wrapped)';
-const REQUEST_TIMEOUT = 15000;
 
-const http = axios.create({
-  baseURL: BASE_URL,
-  timeout: REQUEST_TIMEOUT,
-  headers: {
-    'User-Agent': USER_AGENT,
-  },
-});
+let browser = null;
 
-const DEFAULT_MAX_FILMS = 400;
-const DEFAULT_MAX_WATCHLIST = 200;
+async function getBrowser() {
+  if (!browser) {
+    browser = await chromium.launch({ headless: true });
+  }
+  return browser;
+}
+
+async function fetchHtml(url) {
+  const b = await getBrowser();
+  const page = await b.newPage();
+  try {
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    if (response && response.status() === 404) return null;
+    await page.waitForTimeout(2000);
+    return await page.content();
+  } catch (error) {
+    return null;
+  } finally {
+    await page.close();
+  }
+}
 
 async function fetchCollection(username, section, limit) {
   const safeUser = encodeURIComponent(username.trim());
@@ -25,12 +38,12 @@ async function fetchCollection(username, section, limit) {
 
   while (hasMore && items.length < limit) {
     const url =
-      page === 1 ? `/${safeUser}/${section}/` : `/${safeUser}/${section}/page/${page}/`;
+      page === 1
+        ? `${BASE_URL}/${safeUser}/${section}/`
+        : `${BASE_URL}/${safeUser}/${section}/page/${page}/`;
     const html = await fetchHtml(url);
     if (!html) {
-      if (page === 1) {
-        throw new Error('USER_OR_SECTION_NOT_FOUND');
-      }
+      if (page === 1) throw new Error('USER_OR_SECTION_NOT_FOUND');
       break;
     }
 
@@ -41,10 +54,11 @@ async function fetchCollection(username, section, limit) {
     }
 
     films.forEach((film) => {
-      if (items.length < limit) {
-        items.push(film);
-      }
+      if (items.length < limit) items.push(film);
     });
+
+    const $ = cheerio.load(html);
+    if (!$('a.next').length) hasMore = false;
 
     page += 1;
   }
@@ -52,24 +66,10 @@ async function fetchCollection(username, section, limit) {
   return items;
 }
 
-async function fetchHtml(path) {
-  try {
-    const { data } = await http.get(path);
-    return data;
-  } catch (error) {
-    if (error.response && error.response.status === 404) {
-      return null;
-    }
-    throw error;
-  }
-}
-
 function parseFilms(html) {
   const $ = cheerio.load(html);
   let films = parseLegacyGrid($);
-  if (!films.length) {
-    films = parseReactGrid($);
-  }
+  if (!films.length) films = parseReactGrid($);
   return dedupeBySlug(films);
 }
 
@@ -80,9 +80,7 @@ function parseLegacyGrid($) {
   nodes.each((_, node) => {
     const el = $(node);
     const rawTitle = el.attr('data-film-name') || el.find('img').attr('alt');
-    if (!rawTitle) {
-      return;
-    }
+    if (!rawTitle) return;
 
     const slug = normalizeSlug(el.attr('data-film-slug'));
     const year = parseInt(el.attr('data-film-release-year'), 10) || null;
@@ -107,9 +105,7 @@ function parseReactGrid($) {
   nodes.each((_, node) => {
     const el = $(node);
     const gridItem = el.closest('li.griditem');
-    if (!gridItem.length || !el.closest('.poster-grid').length) {
-      return;
-    }
+    if (!gridItem.length || !el.closest('.poster-grid').length) return;
 
     const rawTitle = el.attr('data-item-name');
     if (!rawTitle) return;
@@ -143,9 +139,7 @@ function extractRatingFromClasses(className = '') {
 
 function extractYear(text = '') {
   const match = text.match(/\((\d{4})\)/);
-  if (match) {
-    return parseInt(match[1], 10);
-  }
+  if (match) return parseInt(match[1], 10);
   return null;
 }
 
@@ -163,9 +157,7 @@ function normalizeSlug(slugPath) {
       return null;
     }
   }
-  if (slugPath.startsWith('/')) {
-    return slugPath;
-  }
+  if (slugPath.startsWith('/')) return slugPath;
   return `/film/${slugPath.replace(/^\/+/, '')}/`;
 }
 
@@ -173,9 +165,7 @@ function dedupeBySlug(films) {
   const seen = new Set();
   return films.filter((film) => {
     const key = film.slug || `${film.title}-${film.year || 'unknown'}`;
-    if (seen.has(key)) {
-      return false;
-    }
+    if (seen.has(key)) return false;
     seen.add(key);
     return true;
   });
@@ -183,19 +173,15 @@ function dedupeBySlug(films) {
 
 async function fetchFavorites(username) {
   const safeUser = encodeURIComponent(username.trim());
-  const html = await fetchHtml(`/${safeUser}/`);
-  if (!html) {
-    return [];
-  }
+  const html = await fetchHtml(`${BASE_URL}/${safeUser}/`);
+  if (!html) return [];
   return parseFavorites(html);
 }
 
 function parseFavorites(html) {
   const $ = cheerio.load(html);
   const section = $('#favourites');
-  if (!section.length) {
-    return [];
-  }
+  if (!section.length) return [];
 
   const nodes = section.find('div.react-component[data-component-class="LazyPoster"]');
   const favorites = [];
@@ -223,20 +209,18 @@ function parseFavorites(html) {
 }
 
 async function scrapeUserProfile(username, options = {}) {
-  if (!username) {
-    throw new Error('USERNAME_REQUIRED');
-  }
+  if (!username) throw new Error('USERNAME_REQUIRED');
 
-  const maxFilms = options.maxFilms || DEFAULT_MAX_FILMS;
-  const maxWatchlist = options.maxWatchlist || DEFAULT_MAX_WATCHLIST;
+  const maxFilms = options.maxFilms || 400;
+  const maxWatchlist = options.maxWatchlist || 200;
 
   const films = await fetchCollection(username, 'films', maxFilms);
+
   let watchlist = [];
   try {
     watchlist = await fetchCollection(username, 'watchlist', maxWatchlist);
   } catch (error) {
     console.warn(`Watchlist scrape failed for ${username}: ${error.message}`);
-    watchlist = [];
   }
 
   let favorites = [];
@@ -244,12 +228,9 @@ async function scrapeUserProfile(username, options = {}) {
     favorites = await fetchFavorites(username);
   } catch (error) {
     console.warn(`Favorites scrape failed for ${username}: ${error.message}`);
-    favorites = [];
   }
 
   return { username: username.trim(), films, watchlist, favorites };
 }
 
-module.exports = {
-  scrapeUserProfile,
-};
+module.exports = { scrapeUserProfile };

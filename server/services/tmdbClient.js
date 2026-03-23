@@ -62,19 +62,25 @@ async function fetchRecommendations(tmdbId, { page = 1 } = {}) {
 }
 
 async function fetchMetadataForFilm(film) {
-  const cacheKey = `tmdb:${film.slug || film.title}:${film.year || 'na'}`;
+  const cacheKey = `tmdb:${film.tmdbId || film.slug || film.title}:${film.year || 'na'}`;
   const cached = cache.get(cacheKey);
   if (cached) {
     return { ...film, tmdb: cached };
   }
 
-  const match = await searchMovie(film.title, film.year);
-  if (!match) {
-    return film;
+  let tmdbId = film.tmdbId;
+  let searchResult = null;
+
+  if (!tmdbId) {
+    searchResult = await searchMovie(film.title, film.year);
+    if (!searchResult) {
+      return film;
+    }
+    tmdbId = searchResult.id;
   }
 
-  const details = await fetchMovieDetails(match.id);
-  const normalized = normalizeDetails(details, match);
+  const details = await fetchMovieDetails(tmdbId);
+  const normalized = normalizeDetails(details, searchResult || details);
 
   cache.set(cacheKey, normalized);
 

@@ -113,24 +113,32 @@ function buildCountryDiversity(films) {
 }
 
 function buildControversialTakes(films) {
-  const divergences = films
+  const allDivergences = films
     .filter((film) => typeof film.rating === 'number' && typeof film.voteAverage === 'number')
     .map((film) => {
       const tmdbRatingFive = film.voteAverage / 2;
       const diff = Number((film.rating - tmdbRatingFive).toFixed(2));
       return { ...film, diff, tmdbRatingFive };
-    })
-    .filter((entry) => Math.abs(entry.diff) >= 0.5);
+    });
 
-  const underrated = divergences
-    .filter((film) => film.diff > 0)
+  const underrated = allDivergences
+    .filter((film) => film.diff >= 0.5)
     .sort((a, b) => b.diff - a.diff)
     .slice(0, 5);
 
-  const overrated = divergences
-    .filter((film) => film.diff < 0)
+  // First try films rated notably below consensus (diff <= -0.5)
+  let overrated = allDivergences
+    .filter((film) => film.diff <= -0.5)
     .sort((a, b) => a.diff - b.diff)
     .slice(0, 5);
+
+  // If none found, show the films the user rated lowest relative to consensus
+  if (!overrated.length && allDivergences.length) {
+    overrated = allDivergences
+      .filter((film) => film.diff < 0)
+      .sort((a, b) => a.diff - b.diff)
+      .slice(0, 5);
+  }
 
   return { underrated, overrated };
 }
