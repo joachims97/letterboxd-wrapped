@@ -1,3 +1,12 @@
+---
+title: Letterboxd Wrapped
+emoji: 🎬
+colorFrom: gray
+colorTo: gray
+sdk: docker
+app_port: 7860
+---
+
 ## Letterboxd Wrapped
 
 Generate a personalized “Wrapped” style report for any public Letterboxd profile. The app scrapes a user’s logged films and watchlist, enriches each title with TMDB metadata, and builds visuals plus a recommendation engine inspired by their taste.
