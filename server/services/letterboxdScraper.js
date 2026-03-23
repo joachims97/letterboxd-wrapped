@@ -1,33 +1,21 @@
 const cheerio = require('cheerio');
-const { chromium } = require('playwright-extra');
-const stealth = require('puppeteer-extra-plugin-stealth');
-
-chromium.use(stealth());
 
 const BASE_URL = 'https://letterboxd.com';
-
-let browser = null;
-
-async function getBrowser() {
-  if (!browser) {
-    browser = await chromium.launch({ headless: true });
-  }
-  return browser;
-}
+const SCRAPE_DO_TOKEN = process.env.SCRAPE_DO_TOKEN;
 
 async function fetchHtml(url) {
-  const b = await getBrowser();
-  const page = await b.newPage();
-  try {
-    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
-    if (response && response.status() === 404) return null;
-    await page.waitForTimeout(2000);
-    return await page.content();
-  } catch (error) {
-    return null;
-  } finally {
-    await page.close();
+  if (!SCRAPE_DO_TOKEN) {
+    throw new Error('SCRAPE_DO_TOKEN environment variable is required');
   }
+
+  const proxyUrl = `https://api.scrape.do?token=${SCRAPE_DO_TOKEN}&url=${encodeURIComponent(url)}`;
+
+  const response = await fetch(proxyUrl, { signal: AbortSignal.timeout(20000) });
+
+  if (response.status === 404) return null;
+  if (!response.ok) return null;
+
+  return response.text();
 }
 
 async function fetchCollection(username, section, limit) {
