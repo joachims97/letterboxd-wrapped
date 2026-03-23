@@ -5,6 +5,7 @@ Generate a personalized “Wrapped” style report for any public Letterboxd pro
 ### Features
 
 - Username lookup
-- Report sections: decade histogram, release year timeline, genre pie, runtime buckets, country diversity
-- “Controversial takes” (user rating vs TMDB average), director deep dives
+- Report sections: histograms of genre, release year, country. 
+- “Controversial takes” (user rating vs TMDB average)
+- Director table
 
