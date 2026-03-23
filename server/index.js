@@ -70,6 +70,7 @@ app.get('/api/report/:username', async (req, res) => {
       rating: f.rating,
       genres: f.genres,
       countries: f.countries,
+      directors: f.directors,
       posterUrl: f.posterUrl,
     }));
 

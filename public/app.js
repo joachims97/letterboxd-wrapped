@@ -9,6 +9,19 @@ const chartRefs = {};
 let lastUsername = '';
 let lastReport = null;
 
+const COUNTRY_NAMES = {
+  US: 'United States', GB: 'United Kingdom', FR: 'France', DE: 'Germany',
+  JP: 'Japan', KR: 'South Korea', IT: 'Italy', ES: 'Spain', CA: 'Canada',
+  AU: 'Australia', NZ: 'New Zealand', BR: 'Brazil', MX: 'Mexico', IN: 'India',
+  CN: 'China', SE: 'Sweden', DK: 'Denmark', NO: 'Norway', FI: 'Finland',
+  IE: 'Ireland', AT: 'Austria', CH: 'Switzerland', BE: 'Belgium', NL: 'Netherlands',
+  PL: 'Poland', CZ: 'Czech Republic', RU: 'Russia', AR: 'Argentina', TH: 'Thailand',
+  HK: 'Hong Kong', TW: 'Taiwan', PH: 'Philippines', ZA: 'South Africa',
+  TR: 'Turkey', GR: 'Greece', PT: 'Portugal', RO: 'Romania', HU: 'Hungary',
+  IL: 'Israel', EG: 'Egypt', NG: 'Nigeria', CO: 'Colombia', CL: 'Chile',
+  PE: 'Peru', IR: 'Iran', PK: 'Pakistan', UA: 'Ukraine', ID: 'Indonesia',
+};
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
   const username = usernameInput.value.trim();
@@ -76,13 +89,22 @@ function getFilmsForGenre(data, genre) {
   return data._allFilms.filter((f) => f.genres && f.genres.includes(genre));
 }
 
-function getFilmsForCountry(data, country) {
-  return data._allFilms.filter((f) => f.countries && f.countries.includes(country));
+function getFilmsForCountry(data, countryCode) {
+  return data._allFilms.filter((f) => f.countries && f.countries.includes(countryCode));
 }
 
 function renderDecadeChart(data) {
-  const labels = [...data.decadeHistogram.labels].reverse();
-  const values = [...data.decadeHistogram.data].reverse();
+  const allLabels = [...data.decadeHistogram.labels].reverse();
+  const allValues = [...data.decadeHistogram.data].reverse();
+
+  // Find first and last decades with films, keep everything in between
+  let first = allValues.findIndex((v) => v > 0);
+  let last = allValues.length - 1;
+  while (last > first && allValues[last] === 0) last--;
+
+  const labels = first >= 0 ? allLabels.slice(first, last + 1) : allLabels;
+  const values = first >= 0 ? allValues.slice(first, last + 1) : allValues;
+
   renderBarChart('decade-chart', labels, values, '#2d2d2d', (label) => {
     showDetail('decade-detail', label, getFilmsForDecade(data, label));
   });
@@ -97,10 +119,12 @@ function renderGenreChart(data) {
 }
 
 function renderCountryChart(data) {
-  const labels = data.countryDiversity.topCountries.map((c) => c.country);
+  const codes = data.countryDiversity.topCountries.map((c) => c.country);
+  const labels = codes.map((c) => COUNTRY_NAMES[c] || c);
   const values = data.countryDiversity.topCountries.map((c) => c.count);
   renderBarChart('country-chart', labels, values, '#2d2d2d', (label) => {
-    showDetail('country-detail', label, getFilmsForCountry(data, label));
+    const code = codes[labels.indexOf(label)];
+    showDetail('country-detail', label, getFilmsForCountry(data, code));
   });
 }
 
@@ -198,8 +222,8 @@ function renderTakesList(targetId, items) {
     li.innerHTML = `
       <img src="${poster}" alt="" class="take-poster" />
       <div class="take-info">
-        <div class="take-title">${film.title}</div>
-        <div class="take-ratings">${film.rating?.toFixed(1) ?? '—'} ★ you &middot; ${tmdbRating} ★ avg</div>
+        <div class="take-title">${film.title}${film.releaseYear ? ` (${film.releaseYear})` : ''}</div>
+        <div class="take-ratings">your rating: ${film.rating?.toFixed(1) ?? '—'} ★<br>average rating: ${tmdbRating} ★</div>
       </div>
       <div class="take-diff ${diffClass}">${diffLabel}</div>
     `;
@@ -218,11 +242,51 @@ function renderDirectorTable(directors) {
 
   directors.forEach((director) => {
     const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
     tr.innerHTML = `<td>${director.name}</td>
       <td>${director.count}</td>
       <td>${director.averageRating ?? '—'}</td>`;
+
+    const detailRow = document.createElement('tr');
+    detailRow.classList.add('director-detail-row', 'hidden');
+    detailRow.innerHTML = '<td colspan="3"></td>';
+
+    tr.addEventListener('click', () => {
+      if (!detailRow.classList.contains('hidden')) {
+        detailRow.classList.add('hidden');
+        return;
+      }
+      // Collapse any other open detail rows
+      tbody.querySelectorAll('.director-detail-row').forEach((r) => r.classList.add('hidden'));
+
+      const films = getFilmsForDirector(director.name);
+      const sorted = [...films].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      const cell = detailRow.querySelector('td');
+
+      let html = '<ul class="chart-detail-list">';
+      sorted.forEach((f) => {
+        const poster = f.posterUrl || placeholderPoster();
+        const rating = typeof f.rating === 'number' ? '★'.repeat(Math.floor(f.rating)) + (f.rating % 1 ? '½' : '') : '';
+        html += `<li>
+          <img src="${poster}" alt="" />
+          <span class="film-title">${f.title}</span>
+          <span class="film-year">${f.releaseYear || ''}</span>
+          <span class="film-rating">${rating}</span>
+        </li>`;
+      });
+      html += '</ul>';
+      cell.innerHTML = html;
+      detailRow.classList.remove('hidden');
+    });
+
     tbody.appendChild(tr);
+    tbody.appendChild(detailRow);
   });
+}
+
+function getFilmsForDirector(name) {
+  if (!lastReport || !lastReport._allFilms) return [];
+  return lastReport._allFilms.filter((f) => f.directors && f.directors.includes(name));
 }
 
 function destroyChart(id) {

@@ -31,6 +31,15 @@ h2 {
   margin-bottom: 10px;
 }
 
+.hint {
+  font-weight: 400;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #aaa;
+  font-style: italic;
+}
+
 form {
   display: flex;
   gap: 6px;
@@ -260,6 +269,17 @@ th {
 td {
   padding: 7px 8px 7px 0;
   border-bottom: 1px solid #eee;
+}
+
+.director-detail-row td {
+  padding: 0;
+  background: #fff;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.director-detail-row .chart-detail-list {
+  max-height: 260px;
+  overflow-y: auto;
 }
 
 /* Footer */

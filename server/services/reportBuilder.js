@@ -37,8 +37,10 @@ function attachDerivedFields(film) {
   const releaseYear = film.tmdb?.releaseYear || film.year || null;
   const runtime = film.tmdb?.runtime || null;
   const genres = film.tmdb?.genres?.map((genre) => genre.name) || [];
-  const countries =
-    film.tmdb?.countries?.map((country) => country.iso_3166_1 || country.name || 'Unknown') || [];
+  const primaryCountry = film.tmdb?.countries?.[0];
+  const countries = primaryCountry
+    ? [primaryCountry.iso_3166_1 || primaryCountry.name || 'Unknown']
+    : [];
   const directors = film.tmdb?.directors || [];
   const cast =
     film.tmdb?.cast?.map((actor) => actor.name).filter(Boolean).slice(0, 6) || [];
